@@ -8,7 +8,6 @@ namespace BitfinexDataWriter
 {
     class Program
     {
-        // TODO: добавить в качестве аргументов имена инструментов
         static void Main(string[] args)
         {
             CancellationTokenSource source = new CancellationTokenSource();

@@ -59,8 +59,8 @@ namespace BitfinexDataWriter.Aggregator
 
         private (double Bid, double Ask) GetBestPrices()
         {
-            var bestBid = _bids.Keys.Max();
-            var bestAsk = _asks.Keys.Min();
+            var bestBid = _bids?.Keys.Max() ?? 0;
+            var bestAsk = _asks?.Keys.Min() ?? 0;
             return (bestBid, bestAsk);
         }
 
