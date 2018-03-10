@@ -13,17 +13,20 @@ namespace BitfinexDataWriter
 
         static void Main(string[] args)
         {
-            //var ws = new ClientWebSocket() { Options = { KeepAliveInterval = new TimeSpan(0, 0, 0, 10) } };
+            CancellationTokenSource source = new CancellationTokenSource();
+
             var uri = new Uri("wss://api.bitfinex.com/ws/2");
 
             var client = new BitfitnexClient(uri);
 
-            client.Listen(CancellationToken.None);
+            client.Listen(source.Token);
 
-            client.Send(PingMessage.CreateMessage(5678).Serialized, CancellationToken.None).Wait();
+            client.Send(PingMessage.CreateMessage(5678).Serialized, source.Token).Wait();
 
-            client.Send(SubscribeMessage.CreateMessage("book", "BTCUSD").Serialized, CancellationToken.None).Wait();
+            client.Send(SubscribeMessage.CreateMessage("book", "BTCUSD").Serialized, source.Token).Wait();
 
+            Console.ReadLine();
+            source.Cancel();
             Console.ReadLine();
         }
 
