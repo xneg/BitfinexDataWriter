@@ -16,5 +16,10 @@ namespace BitfinexDataWriter
         };
 
         public static JsonSerializer Serializer => JsonSerializer.Create(Settings);
+
+        public static T Deserialize<T>(string msg)
+        {
+            return JsonConvert.DeserializeObject<T>(msg, BitfinexJsonSerializer.Settings);
+        }
     }
 }

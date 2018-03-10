@@ -28,7 +28,7 @@ namespace BitfinexDataWriter.Aggregator
 
         public void GetBook(Book book)
         {
-            ManageOrder(FromBook(book));
+            AddOrder(FromBook(book));
             UpdateBestPrices();
         }
 
@@ -36,7 +36,7 @@ namespace BitfinexDataWriter.Aggregator
         {
             foreach(var order in books.Select(FromBook))
             {
-                ManageOrder(order);
+                AddOrder(order);
             }
             UpdateBestPrices();
         }
@@ -74,7 +74,7 @@ namespace BitfinexDataWriter.Aggregator
                 return Order.ToDelete(priceType, book.Price);
         }
 
-        private void ManageOrder(Order order)
+        private void AddOrder(Order order)
         {
             var key = order.Price;
 
@@ -87,6 +87,8 @@ namespace BitfinexDataWriter.Aggregator
                     {
                         _asks.TryGetValue(key, out var currentCount);
                         _asks[key] = currentCount + order.Count;
+                        if (_asks[key] <= 0)
+                            _asks.Remove(key);
                     }
                     break;
                 case PriceType.Bid:
@@ -96,6 +98,8 @@ namespace BitfinexDataWriter.Aggregator
                     {
                         _bids.TryGetValue(key, out var currentCount);
                         _bids[key] = currentCount + order.Count;
+                        if (_bids[key] <= 0)
+                            _bids.Remove(key);
                     }
                     break;
             }

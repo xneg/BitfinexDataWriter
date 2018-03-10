@@ -1,11 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Net.WebSockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+
 using BitfinexDataWriter.Aggregator;
 using BitfinexDataWriter.DataWriter;
 using BitfinexDataWriter.Responses;
@@ -14,15 +13,16 @@ namespace BitfinexDataWriter
 {
     public class BitfitnexClient
     {
-        private const int receiveChunkSize = 1000; //можно вообще вычислить, исходя из формата заявки
+        private const int receiveChunkSize = 256; //можно вообще вычислить, исходя из формата заявки
 
-        private readonly Dictionary<int, IAggregator> _aggregators = new Dictionary<int, IAggregator>();
+        private readonly IAggregatorsStorage _aggregatorsStorage;
+        private readonly Uri _uri;
+        private readonly ClientWebSocket _webSocket;
 
-        private ClientWebSocket _webSocket;
-        private Uri _uri;
 
-        public BitfitnexClient(Uri uri)
+        public BitfitnexClient(IAggregatorsStorage aggregatorsStorage, Uri uri)
         {
+            _aggregatorsStorage = aggregatorsStorage;
             _uri = uri;
             _webSocket = new ClientWebSocket();
         }
@@ -38,29 +38,27 @@ namespace BitfinexDataWriter
             while (_webSocket.State == WebSocketState.Open)
             {
                 var buffer = new byte[receiveChunkSize];
-                var response = await _webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), cancellationToken);
-                var responseMessage = Encoding.UTF8.GetString(buffer, 0, response.Count);
+                var responseMessage = new StringBuilder();
+                WebSocketReceiveResult receiveResult;
 
-                //        do
-                //        {
-                //            result = await client.ReceiveAsync(message, token);
-                //            var receivedMessage = Encoding.UTF8.GetString(buffer, 0, result.Count);
-                //            resultMessage.Append(receivedMessage);
-                //            if (result.MessageType != WebSocketMessageType.Text)
-                //                break;
-
-                //        } while (!result.EndOfMessage);
-
-                if (response.MessageType == WebSocketMessageType.Close)
+                do
                 {
-                    await _webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, string.Empty, CancellationToken.None);
+                    receiveResult = await _webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), cancellationToken)
+                        .ConfigureAwait(false);
+                    var receiveResultString = Encoding.UTF8.GetString(buffer, 0, receiveResult.Count);
+                    responseMessage.Append(receiveResultString);
+                }
+                while (!receiveResult.EndOfMessage);
+
+                if (receiveResult.MessageType == WebSocketMessageType.Close)
+                {
+                    await _webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, string.Empty, CancellationToken.None)
+                        .ConfigureAwait(false);
                 }
                 else
                 {
-                    ;// Console.WriteLine($"{DateTime.UtcNow} : {responseMessage}");
+                    HandleMessage(responseMessage.ToString());
                 }
-
-                HandleMessage(responseMessage);
             }
         }
 
@@ -97,7 +95,7 @@ namespace BitfinexDataWriter
 
         private void OnArrayMessage(string msg)
         {
-            var parsed = Deserialize<JArray>(msg);
+            var parsed = BitfinexJsonSerializer.Deserialize<JArray>(msg);
             if (parsed.Count < 2)
             {
                 Console.WriteLine("Invalid message format, too low items");
@@ -110,9 +108,9 @@ namespace BitfinexDataWriter
 
         private void OnObjectMessage(string msg)
         {
-            var response = Deserialize<SubscribedResponse>(msg);
+            var response = BitfinexJsonSerializer.Deserialize<SubscribedResponse>(msg);
             if (response.Event == "subscribed")
-                _aggregators.Add(response.ChannelId, CreateAggregator(response.ChannelId, response.Pair));
+                _aggregatorsStorage.CreateAggregator(response.ChannelId, response.Pair);
         }
 
         private void OnBook(JToken token, int channelId)
@@ -124,30 +122,19 @@ namespace BitfinexDataWriter
                 return; // heartbeat, ignore
             }
 
+            var aggregator = _aggregatorsStorage.GetAggregator(channelId);
+
             if (data.First.Type == JTokenType.Array)
             {
                 var books = data.ToObject<Book[]>();
 
-                // TODO: переписать
-                _aggregators[channelId].GetSnapshot(books);
-                return;
+                aggregator.GetSnapshot(books);
             }
-
-            var book = data.ToObject<Book>();
-
-            // TODO: переписать
-            _aggregators[channelId].GetBook(book);
-        }
-
-        private IAggregator CreateAggregator(int channelId, string instrumentName)
-        {
-            return new BookAggregator(new FileDataWriter(instrumentName), channelId, instrumentName);
-            //return new Aggregator(new ConsoleDataWriter(), channelId, instrumentName);
-        }
-
-        private T Deserialize<T>(string msg)
-        {
-            return JsonConvert.DeserializeObject<T>(msg, BitfinexJsonSerializer.Settings);
+            else
+            {
+                var book = data.ToObject<Book>();
+                aggregator.GetBook(book);
+            }
         }
     }
 }
