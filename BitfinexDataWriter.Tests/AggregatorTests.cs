@@ -18,11 +18,10 @@ namespace BitfinexDataWriter.Tests
         [Fact]
         public void SnapshotTest()
         {
-            var random = new Random(13);
-            var books = Enumerable.Range(1, 5).Select(r => BookGenerator.GenerateBook(random.Next())).ToArray();
+            var books = BookGenerator.GenerateBooks(13, 100);
 
-            var bestBid = books.Where(b => b.Count > 0 && b.Amount > 0).Max(b => b.Price);
-            var bestAsk = books.Where(b => b.Count > 0 && b.Amount < 0).Min(b => b.Price);
+            var bestBid = books.BestBid();
+            var bestAsk = books.BestAsk();
 
             var aggregator = new BookAggregator(mockedDataWriter.Object, channelId, instrumentName);
 
@@ -44,22 +43,23 @@ namespace BitfinexDataWriter.Tests
         [Fact]
         public void UpdateNotChangingTest()
         {
-            var (aggregator, bestBid, bestAsk) = PrepareAggregator(17);
+            var books = BookGenerator.GenerateBooks(17, 100);
+            var aggregator = PrepareAggregator(books);
 
             mockedDataWriter
                 .Setup(d => d.Write(It.IsAny<ResultData>()))
                 .Callback((ResultData data) =>
                 {
                     Assert.Equal(data.InstrumentName, instrumentName);
-                    Assert.Equal(data.BestAsk, bestAsk);
-                    Assert.Equal(data.BestBid, bestBid);
+                    Assert.Equal(data.BestAsk, books.BestAsk());
+                    Assert.Equal(data.BestBid, books.BestBid());
                 });
 
-            var newBidBook = new Book { Amount = 1, Count = 1, Price = bestBid - 1 };
+            var newBidBook = new Book { Amount = 1, Count = 1, Price = books.BestBid() - 1 };
 
             aggregator.GetBook(newBidBook);
 
-            var newAskBook = new Book { Amount = -1, Count = 1, Price = bestAsk + 1 };
+            var newAskBook = new Book { Amount = -1, Count = 1, Price = books.BestAsk() + 1 };
 
             aggregator.GetBook(newAskBook);
 
@@ -69,7 +69,11 @@ namespace BitfinexDataWriter.Tests
         [Fact]
         public void UpdateChangingTest()
         {
-            var (aggregator, bestBid, bestAsk) = PrepareAggregator(19);
+            var books = BookGenerator.GenerateBooks(19, 100);
+            var aggregator = PrepareAggregator(books);
+
+            var bestAsk = books.BestAsk();
+            var bestBid = books.BestBid();
 
             mockedDataWriter
                 .Setup(d => d.Write(It.IsAny<ResultData>()))
@@ -96,7 +100,11 @@ namespace BitfinexDataWriter.Tests
         [Fact]
         public void DeleteChangingTest()
         {
-            var (aggregator, bestBid, bestAsk) = PrepareAggregator(23);
+            var books = BookGenerator.GenerateBooks(23, 100);
+            var aggregator = PrepareAggregator(books);
+
+            var bestAsk = books.BestAsk();
+            var bestBid = books.BestBid();
 
             mockedDataWriter
                 .Setup(d => d.Write(It.IsAny<ResultData>()))
@@ -104,28 +112,25 @@ namespace BitfinexDataWriter.Tests
                 {
                     Assert.Equal(data.InstrumentName, instrumentName);
                     Assert.Equal(data.BestAsk, bestAsk);
+                    Assert.Equal(data.BestBid, bestBid);
                 });
 
             var deleteBook = new Book { Count = 0, Amount = 1, Price = bestBid };
+            bestBid = books.Where(b => b.Count > 0 && b.Amount > 0).OrderByDescending(b => b.Price).Skip(1).First().Price;
 
             aggregator.GetBook(deleteBook);
 
             mockedDataWriter.Verify(d => d.Write(It.IsAny<ResultData>()), Times.Once);
         }
 
-        private (IAggregator aggregator, double bestBid, double bestAsk) PrepareAggregator(int seed)
+        private IAggregator PrepareAggregator(Book[] books)
         {
-            var random = new Random(seed);
             var aggregator = new BookAggregator(mockedDataWriter.Object, channelId, instrumentName);
-            var books = Enumerable.Range(1, 100).Select(r => BookGenerator.GenerateBook(random.Next())).ToArray();
-
-            var bestBid = books.Where(b => b.Count > 0 && b.Amount > 0).Max(b => b.Price);
-            var bestAsk = books.Where(b => b.Count > 0 && b.Amount < 0).Min(b => b.Price);
 
             aggregator.GetSnapshot(books);
             mockedDataWriter.ResetCalls();
 
-            return (aggregator, bestBid, bestAsk);
+            return aggregator;
         }
     }
 }
