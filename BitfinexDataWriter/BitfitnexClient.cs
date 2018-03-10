@@ -1,12 +1,14 @@
-﻿using BitfinexDataWriter.Responses;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Net.WebSockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using BitfinexDataWriter.Aggregator;
+using BitfinexDataWriter.DataWriter;
+using BitfinexDataWriter.Responses;
 
 namespace BitfinexDataWriter
 {
@@ -14,7 +16,7 @@ namespace BitfinexDataWriter
     {
         private const int receiveChunkSize = 1000; //можно вообще вычислить, исходя из формата заявки
 
-        private readonly Dictionary<int, Aggregator> _aggregators = new Dictionary<int, Aggregator>();
+        private readonly Dictionary<int, IAggregator> _aggregators = new Dictionary<int, IAggregator>();
 
         private ClientWebSocket _webSocket;
         private Uri _uri;
@@ -110,7 +112,7 @@ namespace BitfinexDataWriter
         {
             var response = Deserialize<SubscribedResponse>(msg);
             if (response.Event == "subscribed")
-                _aggregators.Add(response.ChannelId, new Aggregator(response.ChannelId, response.Pair));
+                _aggregators.Add(response.ChannelId, CreateAggregator(response.ChannelId, response.Pair));
         }
 
         private void OnBook(JToken token, int channelId)
@@ -135,6 +137,12 @@ namespace BitfinexDataWriter
 
             // TODO: переписать
             _aggregators[channelId].GetBook(book);
+        }
+
+        private IAggregator CreateAggregator(int channelId, string instrumentName)
+        {
+            return new BookAggregator(new FileDataWriter(instrumentName), channelId, instrumentName);
+            //return new Aggregator(new ConsoleDataWriter(), channelId, instrumentName);
         }
 
         private T Deserialize<T>(string msg)

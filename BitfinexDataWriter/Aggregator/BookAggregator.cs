@@ -3,25 +3,25 @@ using BitfinexDataWriter.Orders;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using BitfinexDataWriter.DataWriter;
 
-namespace BitfinexDataWriter
+namespace BitfinexDataWriter.Aggregator
 {
-    public class Aggregator
+    public class BookAggregator : IAggregator
     {
-        private int _channelId;
-        private string _instrument;
+        private readonly IDataWriter _dataWriter;
+        private readonly int _channelId;
+        private readonly string _instrument;
+        private readonly Dictionary<double, int> _asks = new Dictionary<double, int>();
+        private readonly Dictionary<double, int> _bids = new Dictionary<double, int>();
 
-        private Dictionary<double, int> _asks = new Dictionary<double, int>();
-        private Dictionary<double, int> _bids = new Dictionary<double, int>();
         private double _bestAsk;
         private double _bestBid;
 
-        public int ChannelId => _channelId;
-
-        public string Instrument => _instrument;
-
-        public Aggregator(int channelId, string instrument)
+        public BookAggregator(IDataWriter dataWriter, int channelId, string instrument)
         {
+            _dataWriter = dataWriter ?? throw new ArgumentNullException(nameof(dataWriter));
+
             _channelId = channelId;
             _instrument = instrument;
         }
@@ -29,8 +29,7 @@ namespace BitfinexDataWriter
         public void GetBook(Book book)
         {
             ManageOrder(FromBook(book));
-            if (UpdateBestPrices())
-                PrintBestPrices();
+            UpdateBestPrices();
         }
 
         public void GetSnapshot(Book[] books)
@@ -39,25 +38,23 @@ namespace BitfinexDataWriter
             {
                 ManageOrder(order);
             }
-            if (UpdateBestPrices())
-                PrintBestPrices();
+            UpdateBestPrices();
         }
 
-        private bool UpdateBestPrices()
+        private void UpdateBestPrices()
         {
             var (bid, ask) = GetBestPrices();
             if (bid != _bestBid || ask != _bestAsk)
             {
                 _bestBid = bid;
                 _bestAsk = ask;
-                return true;
+                _dataWriter.Write(GetResultData());
             }
-            return false;
         }
-        
-        private void PrintBestPrices()
+
+        private ResultData GetResultData()
         {
-            Console.WriteLine($"{DateTime.UtcNow} : {_bestBid} {_bestAsk}");
+            return new ResultData(_instrument, DateTime.UtcNow, _bestBid, _bestAsk);
         }
 
         private (double Bid, double Ask) GetBestPrices()
