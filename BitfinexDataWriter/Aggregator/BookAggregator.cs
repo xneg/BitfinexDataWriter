@@ -1,12 +1,15 @@
-﻿using BitfinexDataWriter.Responses;
-using BitfinexDataWriter.Orders;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using BitfinexDataWriter.DataWriter;
+using BitfinexDataWriter.Orders;
+using BitfinexDataWriter.Responses;
 
 namespace BitfinexDataWriter.Aggregator
 {
+    /// <summary>
+    /// Реализация агрегатора для канала Books.
+    /// </summary>
     public class BookAggregator : IAggregator
     {
         private readonly IDataWriter _dataWriter;
@@ -34,16 +37,17 @@ namespace BitfinexDataWriter.Aggregator
 
         public void GetSnapshot(Book[] books)
         {
-            foreach(var order in books.Select(FromBook))
+            foreach (var order in books.Select(FromBook))
             {
                 AddOrder(order);
             }
+
             UpdateBestPrices();
         }
 
         private void UpdateBestPrices()
         {
-            var (bid, ask) = GetBestPrices();
+            var(bid, ask) = GetBestPrices();
             if (bid != _bestBid || ask != _bestAsk)
             {
                 _bestBid = bid;
@@ -69,9 +73,13 @@ namespace BitfinexDataWriter.Aggregator
             var priceType = book.Amount > 0 ? PriceType.Bid : PriceType.Ask;
 
             if (book.Count > 0)
+            {
                 return new Order(priceType, book.Price, book.Count);
+            }
             else
+            {
                 return Order.ToDelete(priceType, book.Price);
+            }
         }
 
         private void AddOrder(Order order)
@@ -82,25 +90,35 @@ namespace BitfinexDataWriter.Aggregator
             {
                 case PriceType.Ask:
                     if (order.NeedDelete)
+                    {
                         _asks.Remove(key);
+                    }
                     else
                     {
                         _asks.TryGetValue(key, out var currentCount);
                         _asks[key] = currentCount + order.Count;
                         if (_asks[key] <= 0)
+                        {
                             _asks.Remove(key);
+                        }
                     }
+
                     break;
                 case PriceType.Bid:
                     if (order.NeedDelete)
+                    {
                         _bids.Remove(key);
+                    }
                     else
                     {
                         _bids.TryGetValue(key, out var currentCount);
                         _bids[key] = currentCount + order.Count;
                         if (_bids[key] <= 0)
+                        {
                             _bids.Remove(key);
+                        }
                     }
+
                     break;
             }
         }

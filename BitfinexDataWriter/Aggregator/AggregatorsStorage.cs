@@ -1,14 +1,21 @@
-﻿using BitfinexDataWriter.DataWriter;
-using System;
+﻿using System;
 using System.Collections.Generic;
+using BitfinexDataWriter.DataWriter;
 
 namespace BitfinexDataWriter.Aggregator
 {
+    /// <summary>
+    /// Реализация хранилища агрегаторов.
+    /// </summary>
     public class AggregatorsStorage : IAggregatorsStorage
     {
         private readonly Dictionary<int, IAggregator> _aggregators = new Dictionary<int, IAggregator>();
         private readonly DataWriterType _dataWriterType;
 
+        /// <summary>
+        /// Конструктор.
+        /// </summary>
+        /// <param name="dataWriterType">Тип провайдера записи данных.</param>
         public AggregatorsStorage(DataWriterType dataWriterType)
         {
             _dataWriterType = dataWriterType;

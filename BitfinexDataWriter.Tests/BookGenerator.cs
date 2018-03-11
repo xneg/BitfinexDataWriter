@@ -1,10 +1,10 @@
-﻿using BitfinexDataWriter.Responses;
-using System;
+﻿using System;
 using System.Linq;
+using BitfinexDataWriter.Responses;
 
 namespace BitfinexDataWriter.Tests
 {
-    static class BookGenerator
+    internal static class BookGenerator
     {
         public static Book GenerateBook(int seed)
         {

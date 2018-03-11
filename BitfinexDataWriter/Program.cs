@@ -1,14 +1,14 @@
-﻿using BitfinexDataWriter.Aggregator;
-using BitfinexDataWriter.Messages;
-using System;
+﻿using System;
 using System.Linq;
 using System.Threading;
+using BitfinexDataWriter.Aggregator;
+using BitfinexDataWriter.Messages;
 
 namespace BitfinexDataWriter
 {
-    class Program
+    internal class Program
     {
-        static void Main(string[] args)
+        private static void Main(string[] args)
         {
             CancellationTokenSource source = new CancellationTokenSource();
 
@@ -38,11 +38,14 @@ namespace BitfinexDataWriter
             if (argsList.Count != 0)
             {
                 foreach (var arg in argsList)
-                    client.Send(SubscribeMessage.CreateMessage("book", arg).Serialized, source.Token).Wait();
+                {
+                    // client.Send(SubscribeMessage.SubscribeToRawBookMessage(arg).Serialized, source.Token).Wait();
+                    client.Send(SubscribeMessage.SubscribeToBookMessage(arg).Serialized, source.Token).Wait();
+                }
             }
             else
             {
-                client.Send(SubscribeMessage.CreateMessage("book", "BTCUSD").Serialized, source.Token).Wait();
+                client.Send(SubscribeMessage.SubscribeToBookMessage("BTCUSD").Serialized, source.Token).Wait();
             }
 
             Console.ReadLine();

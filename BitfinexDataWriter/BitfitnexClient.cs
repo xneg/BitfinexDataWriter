@@ -3,22 +3,19 @@ using System.Net.WebSockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Newtonsoft.Json.Linq;
-
 using BitfinexDataWriter.Aggregator;
-using BitfinexDataWriter.DataWriter;
 using BitfinexDataWriter.Responses;
+using Newtonsoft.Json.Linq;
 
 namespace BitfinexDataWriter
 {
     public class BitfitnexClient
     {
-        private const int receiveChunkSize = 256; //можно вообще вычислить, исходя из формата заявки
+        private const int ReceiveChunkSize = 256; // можно вообще вычислить, исходя из формата заявки
 
         private readonly IAggregatorsStorage _aggregatorsStorage;
         private readonly Uri _uri;
         private readonly ClientWebSocket _webSocket;
-
 
         public BitfitnexClient(IAggregatorsStorage aggregatorsStorage, Uri uri)
         {
@@ -33,11 +30,18 @@ namespace BitfinexDataWriter
             Receive(cancellationToken);
         }
 
+        public async Task Send(string message, CancellationToken cancellationToken)
+        {
+            var buffer = Encoding.UTF8.GetBytes(message);
+            var messageSegment = new ArraySegment<byte>(buffer);
+            await _webSocket.SendAsync(messageSegment, WebSocketMessageType.Text, true, cancellationToken);
+        }
+
         private async Task Receive(CancellationToken cancellationToken)
         {
             while (_webSocket.State == WebSocketState.Open)
             {
-                var buffer = new byte[receiveChunkSize];
+                var buffer = new byte[ReceiveChunkSize];
                 var responseMessage = new StringBuilder();
                 WebSocketReceiveResult receiveResult;
 
@@ -60,13 +64,6 @@ namespace BitfinexDataWriter
                     HandleMessage(responseMessage.ToString());
                 }
             }
-        }
-
-        public async Task Send(string message, CancellationToken cancellationToken)
-        {
-            var buffer = Encoding.UTF8.GetBytes(message);
-            var messageSegment = new ArraySegment<byte>(buffer);
-            await _webSocket.SendAsync(messageSegment, WebSocketMessageType.Text, true, cancellationToken);
         }
 
         private void HandleMessage(string message)
@@ -110,7 +107,9 @@ namespace BitfinexDataWriter
         {
             var response = BitfinexJsonSerializer.Deserialize<SubscribedResponse>(msg);
             if (response.Event == "subscribed")
+            {
                 _aggregatorsStorage.CreateAggregator(response.ChannelId, response.Pair);
+            }
         }
 
         private void OnBook(JToken token, int channelId)

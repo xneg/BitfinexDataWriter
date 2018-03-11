@@ -6,8 +6,8 @@ namespace BitfinexDataWriter.DataWriter
 {
     public class FileDataWriter : IDataWriter
     {
+        private const double Exponent = 1e-8;
         private string _fileName;
-        private const double exponent = 1e-8;
 
         public FileDataWriter(string instrumentName)
         {
@@ -15,7 +15,10 @@ namespace BitfinexDataWriter.DataWriter
 
             var filePath = Path.Combine(appDirectory, instrumentName);
             if (!Directory.Exists(filePath))
+            {
                 Directory.CreateDirectory(filePath);
+            }
+
             _fileName = Path.Combine(filePath, $"{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.dat");
         }
 
@@ -37,7 +40,7 @@ namespace BitfinexDataWriter.DataWriter
 
         private static Int64 GetFixed(double value)
         {
-            return Convert.ToInt64(value / exponent);
+            return Convert.ToInt64(value / Exponent);
         }
     }
 }

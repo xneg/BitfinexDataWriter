@@ -27,7 +27,9 @@ namespace BitfinexDataWriter.Orders
         public static Order operator +(Order o1, Order o2)
         {
             if (o1.PriceType != o2.PriceType || o1.Price != o2.Price)
+            {
                 throw new ArgumentException();
+            }
 
             return new Order(o1.PriceType, o1.Price, o1.Count + o2.Count);
         }

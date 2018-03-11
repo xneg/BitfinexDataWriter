@@ -1,17 +1,19 @@
+using System.Linq;
 using BitfinexDataWriter.Aggregator;
 using BitfinexDataWriter.DataWriter;
 using BitfinexDataWriter.Responses;
 using Moq;
-using System;
-using System.Linq;
 using Xunit;
 
 namespace BitfinexDataWriter.Tests
 {
+    /// <summary>
+    /// Тесты на агрегатор Books.
+    /// </summary>
     public class AggregatorTests
     {
-        private const string instrumentName = "instrument";
-        private const int channelId = 1;
+        private const string InstrumentName = "instrument";
+        private const int ChannelId = 1;
 
         private readonly Mock<IDataWriter> mockedDataWriter = new Mock<IDataWriter>();
 
@@ -23,13 +25,13 @@ namespace BitfinexDataWriter.Tests
             var bestBid = books.BestBid();
             var bestAsk = books.BestAsk();
 
-            var aggregator = new BookAggregator(mockedDataWriter.Object, channelId, instrumentName);
+            var aggregator = new BookAggregator(mockedDataWriter.Object, ChannelId, InstrumentName);
 
             mockedDataWriter
                 .Setup(d => d.Write(It.IsAny<ResultData>()))
                 .Callback((ResultData data) =>
                 {
-                    Assert.Equal(data.InstrumentName, instrumentName);
+                    Assert.Equal(data.InstrumentName, InstrumentName);
                     Assert.Equal(data.BestAsk, bestAsk);
                     Assert.Equal(data.BestBid, bestBid);
                 });
@@ -50,7 +52,7 @@ namespace BitfinexDataWriter.Tests
                 .Setup(d => d.Write(It.IsAny<ResultData>()))
                 .Callback((ResultData data) =>
                 {
-                    Assert.Equal(data.InstrumentName, instrumentName);
+                    Assert.Equal(data.InstrumentName, InstrumentName);
                     Assert.Equal(data.BestAsk, books.BestAsk());
                     Assert.Equal(data.BestBid, books.BestBid());
                 });
@@ -79,7 +81,7 @@ namespace BitfinexDataWriter.Tests
                 .Setup(d => d.Write(It.IsAny<ResultData>()))
                 .Callback((ResultData data) =>
                 {
-                    Assert.Equal(data.InstrumentName, instrumentName);
+                    Assert.Equal(data.InstrumentName, InstrumentName);
                     Assert.Equal(data.BestAsk, bestAsk);
                     Assert.Equal(data.BestBid, bestBid);
                 });
@@ -110,7 +112,7 @@ namespace BitfinexDataWriter.Tests
                 .Setup(d => d.Write(It.IsAny<ResultData>()))
                 .Callback((ResultData data) =>
                 {
-                    Assert.Equal(data.InstrumentName, instrumentName);
+                    Assert.Equal(data.InstrumentName, InstrumentName);
                     Assert.Equal(data.BestAsk, bestAsk);
                     Assert.Equal(data.BestBid, bestBid);
                 });
@@ -125,7 +127,7 @@ namespace BitfinexDataWriter.Tests
 
         private IAggregator PrepareAggregator(Book[] books)
         {
-            var aggregator = new BookAggregator(mockedDataWriter.Object, channelId, instrumentName);
+            var aggregator = new BookAggregator(mockedDataWriter.Object, ChannelId, InstrumentName);
 
             aggregator.GetSnapshot(books);
             mockedDataWriter.ResetCalls();

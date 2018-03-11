@@ -12,8 +12,7 @@ namespace BitfinexDataWriter.Aggregator
 
         public double BestAsk { get; }
 
-        public ResultData(string instrumentName, DateTime dateTime, double bestBid, double bestAsk) 
-            : this()
+        public ResultData(string instrumentName, DateTime dateTime, double bestBid, double bestAsk)
         {
             InstrumentName = instrumentName;
             DateTime = dateTime;
