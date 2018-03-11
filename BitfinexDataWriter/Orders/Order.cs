@@ -4,32 +4,32 @@ namespace BitfinexDataWriter.Orders
 {
     public struct Order
     {
-        public int OrderId { get; }
+        public ulong OrderId { get; }
 
         public PriceType PriceType { get; }
 
         public double Price { get; }
 
-        public int Count { get; }
+        public double Amount { get; }
 
-        public bool NeedDelete => Count == 0;
+        public bool NeedDelete => Amount == 0;
 
-        public Order(PriceType priceType, double price, int count) :
-            this (0, priceType, price, count)
+        public Order(PriceType priceType, double price, double amount) :
+            this (0, priceType, price, amount)
         {
         }
 
-        public Order(int orderId, PriceType priceType, double price, int count)
+        public Order(ulong orderId, PriceType priceType, double price, double amount)
         {
             OrderId = orderId;
             PriceType = priceType;
             Price = price;
-            Count = count;
+            Amount = amount;
         }
 
         public static Order ToDelete(PriceType priceType, double price) => ToDelete(0, priceType, price);
 
-        public static Order ToDelete(int orderId, PriceType priceType, double price) => new Order(orderId, priceType, price, 0);
+        public static Order ToDelete(ulong orderId, PriceType priceType, double price) => new Order(orderId, priceType, price, 0);
 
         public static Order operator +(Order o1, Order o2)
         {
@@ -38,7 +38,7 @@ namespace BitfinexDataWriter.Orders
                 throw new ArgumentException();
             }
 
-            return new Order(o1.PriceType, o1.Price, o1.Count + o2.Count);
+            return new Order(o1.PriceType, o1.Price, o1.Amount + o2.Amount);
         }
     }
 }

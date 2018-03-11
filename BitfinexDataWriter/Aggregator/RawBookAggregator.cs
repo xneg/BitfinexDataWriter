@@ -24,29 +24,24 @@ namespace BitfinexDataWriter.Aggregator
             throw new NotImplementedException();
         }
 
-        public void GetSnapshot(Book[] books)
+        public void GetSnapshot(RawBook[] books)
         {
-            foreach (var order in books.Select(FromBook))
+            foreach (var order in books.Select(FromRawBook))
             {
                 var x = order;
                 //AddOrder(order);
             }
         }
 
-        public void GetSnapshot(RawBook[] books)
-        {
-            throw new NotImplementedException();
-        }
-
-        private Order FromBook(Book book)
+        private Order FromRawBook(RawBook book)
         {
             var priceType = book.Amount > 0 ? PriceType.Bid : PriceType.Ask;
 
-            var orderId = (int)book.Price;
+            var orderId = book.OrderId;
 
-            if (book.Count > 0)
+            if (book.Price > 0)
             {
-                return new Order(orderId, priceType, book.Amount, book.Count);
+                return new Order(orderId, priceType, book.Price, book.Amount);
             }
             else
             {

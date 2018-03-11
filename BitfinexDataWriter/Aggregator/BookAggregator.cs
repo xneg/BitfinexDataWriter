@@ -15,8 +15,8 @@ namespace BitfinexDataWriter.Aggregator
         private readonly IDataWriter _dataWriter;
         private readonly int _channelId;
         private readonly string _instrument;
-        private readonly Dictionary<double, int> _asks = new Dictionary<double, int>();
-        private readonly Dictionary<double, int> _bids = new Dictionary<double, int>();
+        private readonly Dictionary<double, double> _asks = new Dictionary<double, double>();
+        private readonly Dictionary<double, double> _bids = new Dictionary<double, double>();
 
         private double _bestAsk;
         private double _bestBid;
@@ -96,7 +96,7 @@ namespace BitfinexDataWriter.Aggregator
                     else
                     {
                         _asks.TryGetValue(key, out var currentCount);
-                        _asks[key] = currentCount + order.Count;
+                        _asks[key] = currentCount + order.Amount;
                         if (_asks[key] <= 0)
                         {
                             _asks.Remove(key);
@@ -112,7 +112,7 @@ namespace BitfinexDataWriter.Aggregator
                     else
                     {
                         _bids.TryGetValue(key, out var currentCount);
-                        _bids[key] = currentCount + order.Count;
+                        _bids[key] = currentCount + order.Amount;
                         if (_bids[key] <= 0)
                         {
                             _bids.Remove(key);

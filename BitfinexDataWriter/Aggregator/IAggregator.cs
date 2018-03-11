@@ -1,6 +1,4 @@
-﻿using BitfinexDataWriter.Responses;
-
-namespace BitfinexDataWriter.Aggregator
+﻿namespace BitfinexDataWriter.Aggregator
 {
     public interface IAggregator
     {

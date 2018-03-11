@@ -28,7 +28,7 @@ namespace BitfinexDataWriter.Responses
         {
             return new RawBook
             {
-                OrderId = (int)array[0],
+                OrderId = (ulong)array[0],
                 Price = (double)array[1],
                 Amount = (double)array[2],
             };

@@ -43,8 +43,8 @@ namespace BitfinexDataWriter
             {
                 foreach (var arg in argsList)
                 {
-                    //client.Send(SubscribeMessage.SubscribeToRawBookMessage(arg).Serialized, source.Token).Wait();
-                    client.Send(SubscribeMessage.SubscribeToBookMessage(arg).Serialized, source.Token).Wait();
+                    client.Send(SubscribeMessage.SubscribeToRawBookMessage(arg).Serialized, source.Token).Wait();
+                    //client.Send(SubscribeMessage.SubscribeToBookMessage(arg).Serialized, source.Token).Wait();
                 }
             }
             else

@@ -28,19 +28,14 @@ namespace BitfinexDataWriter.Aggregator
             if (subscribedResponse.Event == "subscribed")
             {
                 var aggregatorType = (subscribedResponse.Precision == "R0") ? AggregatorType.RawBooks : AggregatorType.Books;
-                AddAggregator(aggregatorType, subscribedResponse.ChannelId, subscribedResponse.Pair);
+                var channeldId = subscribedResponse.ChannelId;
+                _aggregators.Add(channeldId, CreateAggregator(aggregatorType, channeldId, subscribedResponse.Pair));
             }
         }
 
         public void OnDataReceive(JToken data)
         {
-            var channelId = (int)data[0];
-            OnBook(data, channelId);
-        }
-
-        private void AddAggregator(AggregatorType aggregatorType, int channelId, string instrumentName)
-        {
-            _aggregators.Add(channelId, CreateAggregator(aggregatorType, channelId, instrumentName));
+            OnBook(data);
         }
 
         private IAggregator GetAggregator(int channelId)
@@ -48,8 +43,10 @@ namespace BitfinexDataWriter.Aggregator
             return _aggregators[channelId];
         }
 
-        private void OnBook(JToken token, int channelId)
+        private void OnBook(JToken token)
         {
+            var channelId = (int)token[0];
+
             var data = token[1];
 
             if (data.Type != JTokenType.Array)
@@ -67,6 +64,21 @@ namespace BitfinexDataWriter.Aggregator
                 case RawBookAggregator rawBookAggregator:
                     AddDataToAggregator<RawBook, RawBookAggregator>(data, channelId, rawBookAggregator);
                     break;
+            }
+        }
+        
+        private void AddDataToAggregator<TData, TAggregator> (JToken token, int channelId, TAggregator aggregator) 
+            where TAggregator : IAggregator<TData>
+        {
+            if (token.First.Type == JTokenType.Array)
+            {
+                var books = token.ToObject<TData[]>();
+                aggregator.GetSnapshot(books);
+            }
+            else
+            {
+                var book = token.ToObject<TData>();
+                aggregator.GetBook(book);
             }
         }
 
@@ -96,19 +108,5 @@ namespace BitfinexDataWriter.Aggregator
             }
         }
 
-        private void AddDataToAggregator<TData, TAggregator> (JToken token, int channelId, TAggregator aggregator) 
-            where TAggregator : IAggregator<TData>
-        {
-            if (token.First.Type == JTokenType.Array)
-            {
-                var books = token.ToObject<TData[]>();
-                aggregator.GetSnapshot(books);
-            }
-            else
-            {
-                var book = token.ToObject<TData>();
-                aggregator.GetBook(book);
-            }
-        }
     }
 }
