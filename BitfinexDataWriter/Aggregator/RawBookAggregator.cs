@@ -43,8 +43,12 @@ namespace BitfinexDataWriter.Aggregator
 
         private (double Bid, double Ask) GetBestPrices()
         {
-            var bestBid = _bids?.Values.Max(b => b.Price) ?? 0;
-            var bestAsk = _asks?.Values.Min(a => a.Price) ?? 0;
+            var bidsValues = _bids.Values;
+            var bestBid = bidsValues.Any() ? bidsValues.Max(b => b.Price) : 0;
+
+            var askValues = _asks.Values;
+            var bestAsk = askValues.Any() ? askValues.Min(a => a.Price) : 0;
+
             return (bestBid, bestAsk);
         }
 
@@ -95,7 +99,7 @@ namespace BitfinexDataWriter.Aggregator
                     {
                         _asks.TryGetValue(key, out var currentOrder);
                         _asks[key] = currentOrder + order;
-                        if (_asks[key].Amount <= 0)
+                        if (_asks[key].Amount >= 0)
                         {
                             _asks.Remove(key);
                         }
@@ -120,14 +124,5 @@ namespace BitfinexDataWriter.Aggregator
                     break;
             }
         }
-
-        //Trading: if AMOUNT > 0 then bid else ask; Funding: if AMOUNT< 0 then bid else ask;
-
-        //Algorithm to create and keep a book instance updated
-
-        //subscribe to channel with R0 precision
-        //receive the raw book snapshot and create your in-memory book structure
-        //when PRICE > 0 then you have to add or update the order
-        //when PRICE = 0 then you have to delete the order
     }
 }
