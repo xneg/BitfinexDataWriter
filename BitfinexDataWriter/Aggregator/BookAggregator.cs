@@ -10,7 +10,7 @@ namespace BitfinexDataWriter.Aggregator
     /// <summary>
     /// Реализация агрегатора для канала Books.
     /// </summary>
-    public class BookAggregator : IAggregator
+    public class BookAggregator : IAggregator<Book>
     {
         private readonly IDataWriter _dataWriter;
         private readonly int _channelId;

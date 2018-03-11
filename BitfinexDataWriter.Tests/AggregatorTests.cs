@@ -125,7 +125,7 @@ namespace BitfinexDataWriter.Tests
             mockedDataWriter.Verify(d => d.Write(It.IsAny<ResultData>()), Times.Once);
         }
 
-        private IAggregator PrepareAggregator(Book[] books)
+        private IAggregator<Book> PrepareAggregator(Book[] books)
         {
             var aggregator = new BookAggregator(mockedDataWriter.Object, ChannelId, InstrumentName);
 

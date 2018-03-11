@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using BitfinexDataWriter.DataWriter;
+using BitfinexDataWriter.Responses;
+using Newtonsoft.Json.Linq;
 
 namespace BitfinexDataWriter.Aggregator
 {
@@ -21,26 +23,91 @@ namespace BitfinexDataWriter.Aggregator
             _dataWriterType = dataWriterType;
         }
 
-        public void CreateAggregator(int channelId, string instrumentName)
+        public void OnChannelCreated(SubscribedResponse subscribedResponse)
         {
-            _aggregators.Add(channelId, GetAggregator(channelId, instrumentName));
+            if (subscribedResponse.Event == "subscribed")
+            {
+                var aggregatorType = (subscribedResponse.Precision == "R0") ? AggregatorType.RawBooks : AggregatorType.Books;
+                AddAggregator(aggregatorType, subscribedResponse.ChannelId, subscribedResponse.Pair);
+            }
         }
 
-        public IAggregator GetAggregator(int channelId)
+        public void OnDataReceive(JToken data)
+        {
+            var channelId = (int)data[0];
+            OnBook(data, channelId);
+        }
+
+        private void AddAggregator(AggregatorType aggregatorType, int channelId, string instrumentName)
+        {
+            _aggregators.Add(channelId, CreateAggregator(aggregatorType, channelId, instrumentName));
+        }
+
+        private IAggregator GetAggregator(int channelId)
         {
             return _aggregators[channelId];
         }
 
-        private IAggregator GetAggregator(int channelId, string instrumentName)
+        private void OnBook(JToken token, int channelId)
         {
+            var data = token[1];
+
+            if (data.Type != JTokenType.Array)
+            {
+                return; // heartbeat, ignore
+            }
+
+            var aggregator = GetAggregator(channelId);
+
+            switch (aggregator)
+            {
+                case BookAggregator bookAggregator:
+                    AddDataToAggregator<Book, BookAggregator>(data, channelId, bookAggregator);
+                    break;
+                case RawBookAggregator rawBookAggregator:
+                    AddDataToAggregator<RawBook, RawBookAggregator>(data, channelId, rawBookAggregator);
+                    break;
+            }
+        }
+
+        private IAggregator CreateAggregator(AggregatorType aggregatorType, int channelId, string instrumentName)
+        {
+            IDataWriter dataWriter;
             switch (_dataWriterType)
             {
                 case DataWriterType.BinaryFile:
-                    return new BookAggregator(new FileDataWriter(instrumentName), channelId, instrumentName);
+                    dataWriter = new FileDataWriter(instrumentName);
+                    break;
                 case DataWriterType.Console:
-                    return new BookAggregator(new ConsoleDataWriter(), channelId, instrumentName);
+                    dataWriter = new ConsoleDataWriter();
+                    break;
                 default:
                     throw new ArgumentException(nameof(_dataWriterType));
+            }
+
+            switch (aggregatorType)
+            {
+                case AggregatorType.Books:
+                    return new BookAggregator(dataWriter, channelId, instrumentName);
+                case AggregatorType.RawBooks:
+                    return new RawBookAggregator(dataWriter, channelId, instrumentName);
+                default:
+                    throw new ArgumentException(nameof(aggregatorType));
+            }
+        }
+
+        private void AddDataToAggregator<TData, TAggregator> (JToken token, int channelId, TAggregator aggregator) 
+            where TAggregator : IAggregator<TData>
+        {
+            if (token.First.Type == JTokenType.Array)
+            {
+                var books = token.ToObject<TData[]>();
+                aggregator.GetSnapshot(books);
+            }
+            else
+            {
+                var book = token.ToObject<TData>();
+                aggregator.GetBook(book);
             }
         }
     }

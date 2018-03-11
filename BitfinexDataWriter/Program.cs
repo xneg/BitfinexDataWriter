@@ -29,7 +29,11 @@ namespace BitfinexDataWriter
                 argsList.Remove("--console");
             }
 
-            var client = new BitfitnexClient(new AggregatorsStorage(writerType), uri);
+            IAggregatorsStorage aggregatorsStorage = new AggregatorsStorage(writerType);
+            var client = new BitfitnexClient(uri);
+
+            client.OnSubscribeResponse += aggregatorsStorage.OnChannelCreated;
+            client.OnDataReceive += aggregatorsStorage.OnDataReceive;
 
             client.Listen(source.Token);
 
@@ -39,7 +43,7 @@ namespace BitfinexDataWriter
             {
                 foreach (var arg in argsList)
                 {
-                    // client.Send(SubscribeMessage.SubscribeToRawBookMessage(arg).Serialized, source.Token).Wait();
+                    //client.Send(SubscribeMessage.SubscribeToRawBookMessage(arg).Serialized, source.Token).Wait();
                     client.Send(SubscribeMessage.SubscribeToBookMessage(arg).Serialized, source.Token).Wait();
                 }
             }

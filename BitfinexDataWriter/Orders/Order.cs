@@ -4,6 +4,8 @@ namespace BitfinexDataWriter.Orders
 {
     public struct Order
     {
+        public int OrderId { get; }
+
         public PriceType PriceType { get; }
 
         public double Price { get; }
@@ -12,17 +14,22 @@ namespace BitfinexDataWriter.Orders
 
         public bool NeedDelete => Count == 0;
 
-        public Order(PriceType priceType, double price, int count)
+        public Order(PriceType priceType, double price, int count) :
+            this (0, priceType, price, count)
         {
+        }
+
+        public Order(int orderId, PriceType priceType, double price, int count)
+        {
+            OrderId = orderId;
             PriceType = priceType;
             Price = price;
             Count = count;
         }
-        
-        public static Order ToDelete(PriceType priceType, double price)
-        {
-            return new Order(priceType, price, 0);
-        }
+
+        public static Order ToDelete(PriceType priceType, double price) => ToDelete(0, priceType, price);
+
+        public static Order ToDelete(int orderId, PriceType priceType, double price) => new Order(orderId, priceType, price, 0);
 
         public static Order operator +(Order o1, Order o2)
         {

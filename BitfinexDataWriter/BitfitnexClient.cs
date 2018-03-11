@@ -3,7 +3,6 @@ using System.Net.WebSockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using BitfinexDataWriter.Aggregator;
 using BitfinexDataWriter.Responses;
 using Newtonsoft.Json.Linq;
 
@@ -13,13 +12,17 @@ namespace BitfinexDataWriter
     {
         private const int ReceiveChunkSize = 256; // можно вообще вычислить, исходя из формата заявки
 
-        private readonly IAggregatorsStorage _aggregatorsStorage;
         private readonly Uri _uri;
         private readonly ClientWebSocket _webSocket;
 
-        public BitfitnexClient(IAggregatorsStorage aggregatorsStorage, Uri uri)
+        public delegate void SubscribeResponse(SubscribedResponse response);
+        public delegate void DataReceive(JArray message);
+
+        public event SubscribeResponse OnSubscribeResponse;
+        public event DataReceive OnDataReceive;
+
+        public BitfitnexClient(Uri uri)
         {
-            _aggregatorsStorage = aggregatorsStorage;
             _uri = uri;
             _webSocket = new ClientWebSocket();
         }
@@ -61,6 +64,7 @@ namespace BitfinexDataWriter
                 }
                 else
                 {
+                    // Console.WriteLine(responseMessage.ToString());
                     HandleMessage(responseMessage.ToString());
                 }
             }
@@ -99,41 +103,13 @@ namespace BitfinexDataWriter
                 return;
             }
 
-            var channelId = (int)parsed[0];
-            OnBook(parsed, channelId);
+            OnDataReceive?.Invoke(parsed);           
         }
 
         private void OnObjectMessage(string msg)
         {
             var response = BitfinexJsonSerializer.Deserialize<SubscribedResponse>(msg);
-            if (response.Event == "subscribed")
-            {
-                _aggregatorsStorage.CreateAggregator(response.ChannelId, response.Pair);
-            }
-        }
-
-        private void OnBook(JToken token, int channelId)
-        {
-            var data = token[1];
-
-            if (data.Type != JTokenType.Array)
-            {
-                return; // heartbeat, ignore
-            }
-
-            var aggregator = _aggregatorsStorage.GetAggregator(channelId);
-
-            if (data.First.Type == JTokenType.Array)
-            {
-                var books = data.ToObject<Book[]>();
-
-                aggregator.GetSnapshot(books);
-            }
-            else
-            {
-                var book = data.ToObject<Book>();
-                aggregator.GetBook(book);
-            }
+            OnSubscribeResponse?.Invoke(response);
         }
     }
 }
