@@ -29,11 +29,21 @@ namespace BitfinexDataWriter
                 argsList.Remove("--console");
             }
 
+            var aggregatorType = AggregatorType.Books;
+
+            if (argsList.Contains("--raw"))
+            {
+                aggregatorType = AggregatorType.RawBooks;
+                argsList.Remove("--raw");
+            }
+
             IAggregatorsStorage aggregatorsStorage = new AggregatorsStorage(writerType);
             var client = new BitfitnexClient(uri);
 
             client.OnSubscribeResponse += aggregatorsStorage.OnChannelCreated;
             client.OnDataReceive += aggregatorsStorage.OnDataReceive;
+
+            Console.WriteLine("Start listen...");
 
             client.Listen(source.Token);
 
@@ -43,8 +53,11 @@ namespace BitfinexDataWriter
             {
                 foreach (var arg in argsList)
                 {
-                    client.Send(SubscribeMessage.SubscribeToRawBookMessage(arg).Serialized, source.Token).Wait();
-                    //client.Send(SubscribeMessage.SubscribeToBookMessage(arg).Serialized, source.Token).Wait();
+                    if (aggregatorType == AggregatorType.Books)
+                        client.Send(SubscribeMessage.SubscribeToBookMessage(arg).Serialized, source.Token).Wait();
+                    else
+                        client.Send(SubscribeMessage.SubscribeToRawBookMessage(arg).Serialized, source.Token).Wait();
+                    Console.WriteLine($"Subscribed to {arg}...");
                 }
             }
             else
@@ -54,6 +67,8 @@ namespace BitfinexDataWriter
 
             Console.ReadLine();
             source.Cancel();
+            Console.WriteLine("Finishing...");
+            Console.WriteLine("Press Enter to exit");
             Console.ReadLine();
         }
     }

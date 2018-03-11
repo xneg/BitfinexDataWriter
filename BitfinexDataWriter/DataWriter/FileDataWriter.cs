@@ -9,11 +9,11 @@ namespace BitfinexDataWriter.DataWriter
         private const double Exponent = 1e-8;
         private string _fileName;
 
-        public FileDataWriter(string instrumentName)
+        public FileDataWriter(string instrumentName, AggregatorType aggregatorType)
         {
             var appDirectory = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
 
-            var filePath = Path.Combine(appDirectory, instrumentName);
+            var filePath = Path.Combine(appDirectory, instrumentName, aggregatorType.ToString());
             if (!Directory.Exists(filePath))
             {
                 Directory.CreateDirectory(filePath);

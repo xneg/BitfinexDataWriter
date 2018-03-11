@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using BitfinexDataWriter.DataWriter;
 using BitfinexDataWriter.Orders;
@@ -7,22 +6,16 @@ using BitfinexDataWriter.Responses;
 
 namespace BitfinexDataWriter.Aggregator
 {
-    public class RawBookAggregator : IAggregator<RawBook>
+    public class RawBookAggregator : BaseAggregator, IAggregator<RawBook>
     {
-        private readonly IDataWriter _dataWriter;
         private readonly int _channelId;
-        private readonly string _instrument;
         private readonly Dictionary<ulong, Order> _asks = new Dictionary<ulong, Order>();
         private readonly Dictionary<ulong, Order> _bids = new Dictionary<ulong, Order>();
 
-        private double _bestAsk;
-        private double _bestBid;
-
-        public RawBookAggregator(IDataWriter dataWriter, int channelId, string instrumentName)
+        public RawBookAggregator(IDataWriter dataWriter, int channelId, string instrumentName) 
+            : base(dataWriter, instrumentName)
         {
-            _dataWriter = dataWriter;
             _channelId = channelId;
-            _instrument = instrumentName;
         }
 
         public void GetBook(RawBook book)
@@ -39,33 +32,6 @@ namespace BitfinexDataWriter.Aggregator
             }
 
             UpdateBestPrices();
-        }
-
-        private (double Bid, double Ask) GetBestPrices()
-        {
-            var bidsValues = _bids.Values;
-            var bestBid = bidsValues.Any() ? bidsValues.Max(b => b.Price) : 0;
-
-            var askValues = _asks.Values;
-            var bestAsk = askValues.Any() ? askValues.Min(a => a.Price) : 0;
-
-            return (bestBid, bestAsk);
-        }
-
-        private void UpdateBestPrices()
-        {
-            var (bid, ask) = GetBestPrices();
-            if (bid != _bestBid || ask != _bestAsk)
-            {
-                _bestBid = bid;
-                _bestAsk = ask;
-                _dataWriter.Write(GetResultData());
-            }
-        }
-
-        private ResultData GetResultData()
-        {
-            return new ResultData(_instrument, DateTime.UtcNow, _bestBid, _bestAsk);
         }
 
         private Order FromRawBook(RawBook book)
@@ -123,6 +89,17 @@ namespace BitfinexDataWriter.Aggregator
 
                     break;
             }
+        }
+
+        protected override (double Bid, double Ask) GetBestPrices()
+        {
+            var bidsValues = _bids.Values;
+            var bestBid = bidsValues.Any() ? bidsValues.Max(b => b.Price) : 0;
+
+            var askValues = _asks.Values;
+            var bestAsk = askValues.Any() ? askValues.Min(a => a.Price) : 0;
+
+            return (bestBid, bestAsk);
         }
     }
 }

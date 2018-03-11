@@ -88,10 +88,10 @@ namespace BitfinexDataWriter.Aggregator
             switch (_dataWriterType)
             {
                 case DataWriterType.BinaryFile:
-                    dataWriter = new FileDataWriter(instrumentName);
+                    dataWriter = new FileDataWriter(instrumentName, aggregatorType);
                     break;
                 case DataWriterType.Console:
-                    dataWriter = new ConsoleDataWriter();
+                    dataWriter = new ConsoleDataWriter(aggregatorType);
                     break;
                 default:
                     throw new ArgumentException(nameof(_dataWriterType));
