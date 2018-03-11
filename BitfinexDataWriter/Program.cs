@@ -63,6 +63,7 @@ namespace BitfinexDataWriter
             else
             {
                 client.Send(SubscribeMessage.SubscribeToBookMessage("BTCUSD").Serialized, source.Token).Wait();
+                Console.WriteLine($"Subscribed to BTCUSD...");
             }
 
             Console.ReadLine();
